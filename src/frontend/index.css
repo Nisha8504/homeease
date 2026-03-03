@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Sora";
+  src: url("/assets/fonts/Sora[wght].woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans[wght].woff2") format("woff2-variations");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Deep navy with teal accent palette */
+    --background: 0.97 0.008 220;
+    --foreground: 0.15 0.02 240;
+
+    --card: 1 0 0;
+    --card-foreground: 0.15 0.02 240;
+
+    --popover: 1 0 0;
+    --popover-foreground: 0.15 0.02 240;
+
+    /* Teal primary */
+    --primary: 0.52 0.155 195;
+    --primary-foreground: 1 0 0;
+
+    --secondary: 0.94 0.015 220;
+    --secondary-foreground: 0.25 0.04 240;
+
+    --muted: 0.94 0.008 220;
+    --muted-foreground: 0.52 0.02 220;
+
+    --accent: 0.94 0.02 195;
+    --accent-foreground: 0.25 0.04 240;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --border: 0.90 0.012 220;
+    --input: 0.90 0.012 220;
+    --ring: 0.52 0.155 195;
+
+    --chart-1: 0.52 0.155 195;
+    --chart-2: 0.65 0.18 160;
+    --chart-3: 0.75 0.16 85;
+    --chart-4: 0.62 0.2 30;
+    --chart-5: 0.55 0.18 280;
+
+    --sidebar: 0.18 0.04 240;
+    --sidebar-foreground: 0.95 0.01 220;
+    --sidebar-primary: 0.52 0.155 195;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.25 0.04 240;
+    --sidebar-accent-foreground: 0.95 0.01 220;
+    --sidebar-border: 0.28 0.05 240;
+    --sidebar-ring: 0.52 0.155 195;
+
+    /* Hero gradient */
+    --hero-from: 0.18 0.05 240;
+    --hero-to: 0.25 0.08 210;
+    --hero-accent: 0.52 0.155 195;
+  }
+
+  .dark {
+    --background: 0.12 0.02 240;
+    --foreground: 0.95 0.01 220;
+
+    --card: 0.17 0.03 240;
+    --card-foreground: 0.95 0.01 220;
+
+    --popover: 0.20 0.04 240;
+    --popover-foreground: 0.95 0.01 220;
+
+    --primary: 0.60 0.155 195;
+    --primary-foreground: 0.10 0.02 240;
+
+    --secondary: 0.22 0.04 240;
+    --secondary-foreground: 0.95 0.01 220;
+
+    --muted: 0.22 0.04 240;
+    --muted-foreground: 0.65 0.03 220;
+
+    --accent: 0.25 0.05 240;
+    --accent-foreground: 0.95 0.01 220;
+
+    --destructive: 0.65 0.22 27;
+    --destructive-foreground: 0.95 0 0;
+
+    --border: 1 0 0 / 10%;
+    --input: 1 0 0 / 15%;
+    --ring: 0.60 0.155 195;
+
+    --sidebar: 0.14 0.03 240;
+    --sidebar-foreground: 0.95 0.01 220;
+    --sidebar-primary: 0.60 0.155 195;
+    --sidebar-primary-foreground: 0.10 0.02 240;
+    --sidebar-accent: 0.22 0.04 240;
+    --sidebar-accent-foreground: 0.95 0.01 220;
+    --sidebar-border: 1 0 0 / 10%;
+    --sidebar-ring: 0.60 0.155 195;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "General Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Sora", system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .hero-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(0.18 0.05 240) 0%,
+      oklch(0.22 0.08 220) 50%,
+      oklch(0.20 0.07 200) 100%
+    );
+  }
+
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 shadow-xl;
+  }
+
+  .service-card-gradient-mechanic {
+    background: linear-gradient(135deg, oklch(0.35 0.12 240) 0%, oklch(0.28 0.10 260) 100%);
+  }
+  .service-card-gradient-electrician {
+    background: linear-gradient(135deg, oklch(0.38 0.14 80) 0%, oklch(0.32 0.12 60) 100%);
+  }
+  .service-card-gradient-plumber {
+    background: linear-gradient(135deg, oklch(0.35 0.13 210) 0%, oklch(0.28 0.11 200) 100%);
+  }
+  .service-card-gradient-acservice {
+    background: linear-gradient(135deg, oklch(0.38 0.14 195) 0%, oklch(0.32 0.12 185) 100%);
+  }
+  .service-card-gradient-deepcleaning {
+    background: linear-gradient(135deg, oklch(0.38 0.14 160) 0%, oklch(0.32 0.12 145) 100%);
+  }
+  .service-card-gradient-pestcontrol {
+    background: linear-gradient(135deg, oklch(0.38 0.14 30) 0%, oklch(0.32 0.12 20) 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(90deg, oklch(0.85 0.08 195), oklch(0.75 0.12 160));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass-card {
+    background: oklch(1 0 0 / 0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid oklch(1 0 0 / 0.12);
+  }
+
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+  }
+  .status-accepted {
+    @apply bg-green-100 text-green-800 border-green-200;
+  }
+  .status-rejected {
+    @apply bg-red-100 text-red-800 border-red-200;
+  }
+  .status-completed {
+    @apply bg-blue-100 text-blue-800 border-blue-200;
+  }
+  .status-paid {
+    @apply bg-purple-100 text-purple-800 border-purple-200;
+  }
+}
