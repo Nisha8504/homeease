@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Menu, Wrench, X } from "lucide-react";
 import { useState } from "react";
 import { UserRole } from "../backend.d";
@@ -8,13 +8,17 @@ import { useAppContext } from "../context/AppContext";
 
 export default function Navbar() {
   const { user, logout } = useAppContext();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
+    // Clear session state first, then force a full page reload.
+    // This ensures a fresh anonymous ICP principal is issued for the next
+    // login session, preventing principal key collisions between accounts.
     logout();
-    navigate({ to: "/" });
     setOpen(false);
+    // Use href redirect instead of navigate() to force a full page reload
+    // so the ICP actor is re-initialized with a brand-new anonymous principal.
+    window.location.href = "/";
   };
 
   const navLinks = () => {

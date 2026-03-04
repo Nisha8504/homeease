@@ -1,22 +1,19 @@
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
-import Order "mo:core/Order";
 import Map "mo:core/Map";
-import Text "mo:core/Text";
+import Order "mo:core/Order";
 import Time "mo:core/Time";
-import Int "mo:core/Int";
-import Blob "mo:core/Blob";
 import Float "mo:core/Float";
-import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
-
+import Runtime "mo:core/Runtime";
+import Blob "mo:core/Blob";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
 
+
+
 actor {
-  // Hardcoded admin password SHA-256 hash for "admin123"
-  // Corresponds to hex: 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
   let adminPasswordSHA256 = Blob.fromArray([
     0x24, 0x0b, 0xe5, 0x18, 0xfa, 0xbd, 0x27, 0x24, 0xdd, 0xb6, 0xf0, 0x4e, 0xeb, 0x1d, 0xa5, 0x96, 0x74, 0x48, 0xd7, 0xe8, 0x31, 0xc0, 0x8c, 0x8f, 0xa8, 0x22, 0x80, 0x9f, 0x74, 0xc7, 0x20, 0xa9,
   ]);
@@ -25,12 +22,12 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  type UserRole = { #customer; #provider; #admin };
-  type ServiceCategory = { #mechanic; #electrician; #plumber; #acService; #deepCleaning; #pestControl };
-  type ApprovalStatus = { #pending; #approved; #rejected };
-  type BookingStatus = { #pending; #accepted; #rejected; #completed; #paid };
+  public type UserRole = { #customer; #provider; #admin };
+  public type ServiceCategory = { #mechanic; #electrician; #plumber; #acService; #deepCleaning; #pestControl };
+  public type ApprovalStatus = { #pending; #approved; #rejected };
+  public type BookingStatus = { #pending; #accepted; #rejected; #completed; #paid };
 
-  type User = {
+  public type User = {
     principal : Principal;
     email : Text;
     passwordHash : Blob;
@@ -38,7 +35,7 @@ actor {
     role : UserRole;
   };
 
-  type ProviderProfile = {
+  public type ProviderProfile = {
     userId : Principal;
     name : Text;
     email : Text;
@@ -50,7 +47,7 @@ actor {
     totalEarnings : Nat;
   };
 
-  type Booking = {
+  public type Booking = {
     id : Text;
     customerId : Principal;
     providerId : Principal;
@@ -65,7 +62,7 @@ actor {
     amount : Nat;
   };
 
-  type Review = {
+  public type Review = {
     bookingId : Text;
     customerId : Principal;
     providerId : Principal;
@@ -80,7 +77,7 @@ actor {
     role : UserRole;
   };
 
-  type RevenueStats = {
+  public type RevenueStats = {
     category : ServiceCategory;
     bookingCount : Nat;
     totalRevenue : Nat;
@@ -103,58 +100,8 @@ actor {
     "REVIEW-" # reviewCounter.toText();
   };
 
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
-    };
-    switch (users.get(caller)) {
-      case (?user) {
-        ?{
-          name = user.name;
-          email = user.email;
-          role = user.role;
-        };
-      };
-      case (null) { null };
-    };
-  };
-
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
-    switch (users.get(user)) {
-      case (?u) {
-        ?{
-          name = u.name;
-          email = u.email;
-          role = u.role;
-        };
-      };
-      case (null) { null };
-    };
-  };
-
-  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    switch (users.get(caller)) {
-      case (?user) {
-        let updatedUser = {
-          user with
-          name = profile.name;
-          email = profile.email;
-        };
-        users.add(caller, updatedUser);
-      };
-      case (null) {
-        Runtime.trap("User not found");
-      };
-    };
-  };
-
   public shared ({ caller }) func registerCustomer(email : Text, passwordHash : Blob, name : Text) : async () {
+    // Registration is open to all (including anonymous/guest users)
     if (users.values().any(func(u : User) : Bool { u.email == email })) {
       Runtime.trap("Email already registered");
     };
@@ -170,6 +117,7 @@ actor {
   };
 
   public shared ({ caller }) func registerProvider(email : Text, passwordHash : Blob, name : Text, serviceCategory : ServiceCategory) : async () {
+    // Registration is open to all (including anonymous/guest users)
     if (users.values().any(func(u : User) : Bool { u.email == email })) {
       Runtime.trap("Email already registered");
     };
@@ -197,10 +145,26 @@ actor {
     accessControlState.userRoles.add(caller, #user);
   };
 
+  func isAdminCaller(caller : Principal) : Bool {
+    switch (accessControlState.userRoles.get(caller)) {
+      case (?#admin) { true };
+      case (_) { false };
+    };
+  };
+
+  func hasUserPermission(caller : Principal) : Bool {
+    switch (accessControlState.userRoles.get(caller)) {
+      case (?#admin) { true };
+      case (?#user) { true };
+      case (_) { false };
+    };
+  };
+
   public shared ({ caller }) func loginWithCredentials(email : Text, passwordHash : Blob) : async (UserRole, Text) {
+    // Login is accessible to all - it grants access upon successful authentication
     // Special admin login - register admin role in access control system
     if (
-      email == "admin@homeserve.com" and
+      email == "admin@homeease.com" and
       passwordHash.size() == adminPasswordSHA256.size() and
       passwordHash.toArray() == adminPasswordSHA256.toArray()
     ) {
@@ -208,32 +172,165 @@ actor {
       return (#admin, "Admin");
     };
 
-    // Regular user login
+    // Normal user login - perform principal remapping if needed
     for (user in users.values()) {
       if (user.email == email and user.passwordHash == passwordHash) {
-        // Ensure user is registered in access control system
-        // This handles cases where user was registered before but role wasn't set
-        switch (AccessControl.getUserRole(accessControlState, user.principal)) {
-          case (#guest) {
-            accessControlState.userRoles.add(user.principal, #user);
+        // KEY FIX: Always update mapping, no anonymous check needed
+        // Remove old user mapping
+        users.remove(user.principal);
+
+        // Add new user mapping with new caller principal
+        let updatedUser = {
+          user with
+          principal = caller;
+        };
+        users.add(caller, updatedUser);
+
+        // Update provider profile if user is provider
+        switch (providerProfiles.get(user.principal)) {
+          case (?profile) {
+            // Remove old provider profile mapping
+            providerProfiles.remove(user.principal);
+
+            // Add new provider profile mapping with updated principal
+            let updatedProfile = {
+              profile with
+              userId = caller; // Update userId for new principal
+            };
+            providerProfiles.add(caller, updatedProfile);
           };
-          case (_) {
-            // Already registered, do nothing
+          case (null) { /* Not a provider, skip */ };
+        };
+
+        // Update bookings with new principal reference
+        for ((bookingId, booking) in bookings.entries()) {
+          if (booking.customerId == user.principal or booking.providerId == user.principal) {
+            let updatedBooking = {
+              booking with
+              customerId = if (booking.customerId == user.principal) { caller } else {
+                booking.customerId;
+              };
+              providerId = if (booking.providerId == user.principal) { caller } else {
+                booking.providerId;
+              };
+            };
+            bookings.add(bookingId, updatedBooking);
           };
         };
+
+        // Update reviews with new principal reference
+        for ((reviewId, review) in reviews.entries()) {
+          if (review.customerId == user.principal or review.providerId == user.principal) {
+            let updatedReview = {
+              review with
+              customerId = if (review.customerId == user.principal) { caller } else {
+                review.customerId;
+              };
+              providerId = if (review.providerId == user.principal) { caller } else {
+                review.providerId;
+              };
+            };
+            reviews.add(reviewId, updatedReview);
+          };
+        };
+
+        // Update access control state for user role
+        accessControlState.userRoles.remove(user.principal);
+        accessControlState.userRoles.add(caller, #user);
+
+        // Return user role and name (from possibly new principal mapping)
         return (user.role, user.name);
       };
     };
+
+    // If no matching user found, throw error
     Runtime.trap("Invalid credentials");
   };
 
-  public query ({ caller }) func getMyProfile() : async User {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view their profile");
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not hasUserPermission(caller)) {
+      Runtime.trap("Unauthorized: Only users can view profiles");
     };
     switch (users.get(caller)) {
-      case (?user) { user };
-      case (null) { Runtime.trap("User not found") };
+      case (?user) {
+        ?{
+          name = user.name;
+          email = user.email;
+          role = user.role;
+        };
+      };
+      case (null) { null };
+    };
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not isAdminCaller(caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    switch (users.get(user)) {
+      case (?u) {
+        ?{
+          name = u.name;
+          email = u.email;
+          role = u.role;
+        };
+      };
+      case (null) { null };
+    };
+  };
+
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not hasUserPermission(caller)) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    switch (users.get(caller)) {
+      case (?user) {
+        let updatedUser = {
+          user with
+          name = profile.name;
+          email = profile.email;
+        };
+        users.add(caller, updatedUser);
+
+        // Also update provider profile if user is a provider
+        switch (providerProfiles.get(caller)) {
+          case (?providerProfile) {
+            let updatedProviderProfile = {
+              providerProfile with
+              name = profile.name;
+              email = profile.email;
+            };
+            providerProfiles.add(caller, updatedProviderProfile);
+          };
+          case (null) { /* Not a provider, skip */ };
+        };
+      };
+      case (null) {
+        Runtime.trap("User not found");
+      };
+    };
+  };
+
+  public query ({ caller }) func getMyProviderProfile() : async ProviderProfile {
+    if (not hasUserPermission(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can view their provider profile");
+    };
+    switch (providerProfiles.get(caller)) {
+      case (?profile) { profile };
+      case (null) { Runtime.trap("Provider profile not found.") };
+    };
+  };
+
+  public shared ({ caller }) func uploadIdProof(blobId : Text) : async () {
+    if (not hasUserPermission(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can upload ID proof");
+    };
+    switch (providerProfiles.get(caller)) {
+      case (?profile) {
+        let updatedProfile = { profile with idProofBlobId = ?blobId };
+        providerProfiles.add(caller, updatedProfile);
+      };
+      case (null) { Runtime.trap("Provider profile not found. Please register as a provider first.") };
     };
   };
 
@@ -244,40 +341,19 @@ actor {
   };
 
   public query ({ caller }) func getApprovedProviders(category : ServiceCategory) : async [ProviderProfile] {
-    // Public endpoint - no authorization required
-    providerProfiles.values().toArray().filter(
+    // Public endpoint - anyone can browse providers (no auth required)
+    let providers = providerProfiles.values().toArray().filter(
       func(p : ProviderProfile) : Bool { p.serviceCategory == category and p.approvalStatus == #approved }
-    ).sort();
-  };
-
-  public query ({ caller }) func getAllApprovedProviders() : async [ProviderProfile] {
-    // Public endpoint - no authorization required
-    providerProfiles.values().toArray().filter(
-      func(p : ProviderProfile) : Bool { p.approvalStatus == #approved }
+    );
+    providers.sort(
     );
   };
 
-  public shared ({ caller }) func uploadIdProof(blobId : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can upload ID proof");
-    };
-    switch (providerProfiles.get(caller)) {
-      case (?profile) {
-        let updatedProfile = { profile with idProofBlobId = ?blobId };
-        providerProfiles.add(caller, updatedProfile);
-      };
-      case (null) { Runtime.trap("Provider profile not found") };
-    };
-  };
-
-  public query ({ caller }) func getMyProviderProfile() : async ProviderProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view their provider profile");
-    };
-    switch (providerProfiles.get(caller)) {
-      case (?profile) { profile };
-      case (null) { Runtime.trap("Provider profile not found") };
-    };
+  public query ({ caller }) func getAllApprovedProviders() : async [ProviderProfile] {
+    // Public endpoint - anyone can browse providers (no auth required)
+    providerProfiles.values().toArray().filter(
+      func(p : ProviderProfile) : Bool { p.approvalStatus == #approved }
+    );
   };
 
   public shared ({ caller }) func createBooking(
@@ -289,9 +365,11 @@ actor {
     scheduledDate : Text,
     scheduledTime : Text
   ) : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can create bookings");
     };
+
+    // Verify caller is a customer
     switch (users.get(caller)) {
       case (?user) {
         if (user.role != #customer) {
@@ -302,6 +380,8 @@ actor {
         Runtime.trap("User not found");
       };
     };
+
+    // Verify provider exists and is approved
     switch (providerProfiles.get(providerId)) {
       case (?provider) {
         if (provider.approvalStatus != #approved) {
@@ -333,21 +413,21 @@ actor {
   };
 
   public query ({ caller }) func getMyBookingsAsCustomer() : async [Booking] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can view their bookings");
     };
     bookings.values().toArray().filter(func(_booking : Booking) : Bool { _booking.customerId == caller });
   };
 
   public query ({ caller }) func getMyBookingsAsProvider() : async [Booking] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can view their bookings");
     };
     bookings.values().toArray().filter(func(_booking : Booking) : Bool { _booking.providerId == caller });
   };
 
   public shared ({ caller }) func respondToBooking(bookingId : Text, accept : Bool) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can respond to bookings");
     };
     switch (bookings.get(bookingId)) {
@@ -368,7 +448,7 @@ actor {
   };
 
   public shared ({ caller }) func markBookingCompleted(bookingId : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can mark bookings as completed");
     };
     switch (bookings.get(bookingId)) {
@@ -386,7 +466,7 @@ actor {
   };
 
   public shared ({ caller }) func markBookingPaid(bookingId : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can mark bookings as paid");
     };
     switch (bookings.get(bookingId)) {
@@ -414,7 +494,7 @@ actor {
   };
 
   public shared ({ caller }) func submitReview(bookingId : Text, rating : Nat, comment : Text) : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not hasUserPermission(caller)) {
       Runtime.trap("Unauthorized: Only users can submit reviews");
     };
     if (rating < 1 or rating > 5) {
@@ -459,19 +539,19 @@ actor {
   };
 
   public query ({ caller }) func getReviewsForProvider(providerId : Principal) : async [Review] {
-    // Public endpoint - no authorization required
+    // Public endpoint - anyone can view reviews (no auth required)
     reviews.values().toArray().filter(func(_review : Review) : Bool { _review.providerId == providerId });
   };
 
   public query ({ caller }) func adminGetPendingProviders() : async [ProviderProfile] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Unauthorized: Only admins can perform this action");
     };
     providerProfiles.values().toArray().filter(func(_profile : ProviderProfile) : Bool { _profile.approvalStatus == #pending });
   };
 
   public shared ({ caller }) func adminApproveProvider(providerId : Principal, approve : Bool) : async () {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Unauthorized: Only admins can perform this action");
     };
     switch (providerProfiles.get(providerId)) {
@@ -484,7 +564,7 @@ actor {
   };
 
   public query ({ caller }) func adminGetAllBookings(_dateFilter : ?Text) : async [Booking] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Unauthorized: Only admins can perform this action");
     };
     let allBookings = bookings.values().toArray();
@@ -499,14 +579,14 @@ actor {
   };
 
   public query ({ caller }) func adminGetAllProviders() : async [ProviderProfile] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Unauthorized: Only admins can perform this action");
     };
     providerProfiles.values().toArray();
   };
 
   public query ({ caller }) func adminGetRevenueStats() : async [RevenueStats] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Unauthorized: Only admins can perform this action");
     };
 
@@ -528,5 +608,15 @@ actor {
       }
     );
     stats;
+  };
+
+  public query ({ caller }) func getMyProfile() : async User {
+    if (not hasUserPermission(caller)) {
+      Runtime.trap("Unauthorized: Only users can view their profile");
+    };
+    switch (users.get(caller)) {
+      case (?user) { user };
+      case (null) { Runtime.trap("User not found") };
+    };
   };
 };

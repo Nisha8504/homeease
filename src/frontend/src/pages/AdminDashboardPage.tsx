@@ -1,4 +1,10 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +17,8 @@ import {
   Calendar,
   CheckCircle,
   ClipboardList,
+  Eye,
+  FileText,
   Loader2,
   MapPin,
   ShieldCheck,
@@ -43,6 +51,18 @@ export default function AdminDashboardPage() {
 
   const [dateFilter, setDateFilter] = useState("");
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [viewingIdProof, setViewingIdProof] = useState<{
+    name: string;
+    dataUrl: string;
+  } | null>(null);
+
+  const getIdProofDataUrl = (blobId: string): string | null => {
+    try {
+      return localStorage.getItem(`idproof_${blobId}`);
+    } catch {
+      return null;
+    }
+  };
 
   const { data: pendingProviders, isLoading: pendingLoading } = useQuery<
     ProviderProfile[]
@@ -173,6 +193,43 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
+      {/* ID Proof Viewer Dialog */}
+      <Dialog
+        open={!!viewingIdProof}
+        onOpenChange={(open) => {
+          if (!open) setViewingIdProof(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl" data-ocid="admin.id_proof.dialog">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              ID Proof — {viewingIdProof?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            {viewingIdProof?.dataUrl.startsWith("data:image") ? (
+              <img
+                src={viewingIdProof.dataUrl}
+                alt={`ID Proof for ${viewingIdProof.name}`}
+                className="w-full rounded-lg border border-border object-contain max-h-[60vh]"
+              />
+            ) : viewingIdProof?.dataUrl.startsWith("data:application/pdf") ? (
+              <iframe
+                src={viewingIdProof.dataUrl}
+                title={`ID Proof PDF for ${viewingIdProof.name}`}
+                className="w-full h-[60vh] rounded-lg border border-border"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mb-3" />
+                <p>Cannot preview this file type.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <section className="container mx-auto px-4 py-8">
         <Tabs defaultValue="approvals">
           <TabsList className="mb-6 w-full sm:w-auto" data-ocid="admin.tabs">
@@ -267,14 +324,42 @@ export default function AdminDashboardPage() {
                             <p className="text-sm font-medium text-foreground mt-1">
                               {info?.icon} {info?.label}
                             </p>
-                            {provider.idProofBlobId && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                ID Proof:{" "}
-                                <span className="font-mono text-primary">
-                                  {provider.idProofBlobId.slice(0, 20)}...
-                                </span>
-                              </p>
-                            )}
+                            {provider.idProofBlobId &&
+                              (() => {
+                                const dataUrl = getIdProofDataUrl(
+                                  provider.idProofBlobId,
+                                );
+                                return (
+                                  <div className="mt-1">
+                                    {dataUrl ? (
+                                      <button
+                                        type="button"
+                                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium underline-offset-2 hover:underline transition-colors"
+                                        onClick={() =>
+                                          setViewingIdProof({
+                                            name: provider.name,
+                                            dataUrl,
+                                          })
+                                        }
+                                        data-ocid={`admin.view_id_proof.button.${idx + 1}`}
+                                      >
+                                        <Eye className="h-3.5 w-3.5" />
+                                        View ID Proof
+                                      </button>
+                                    ) : (
+                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <FileText className="h-3.5 w-3.5" />
+                                        <span>
+                                          ID proof uploaded{" "}
+                                          <span className="text-amber-600">
+                                            (preview unavailable on this device)
+                                          </span>
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             {!provider.idProofBlobId && (
                               <p className="text-xs text-amber-600 mt-1">
                                 ⚠️ No ID proof uploaded yet

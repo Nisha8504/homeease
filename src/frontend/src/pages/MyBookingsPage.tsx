@@ -14,6 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   Calendar,
   ClipboardList,
+  Clock,
   CreditCard,
   Loader2,
   MapPin,
@@ -258,8 +259,14 @@ export default function MyBookingsPage() {
                     </div>
                   )}
                   {booking.status === BookingStatus.accepted && (
-                    <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700 mb-4">
-                      ✅ Provider accepted your booking and will arrive soon.
+                    <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700 mb-4 flex items-start gap-2">
+                      <Clock className="h-4 w-4 mt-0.5 shrink-0 text-green-600" />
+                      <div>
+                        <span className="font-semibold">Booking accepted!</span>{" "}
+                        Provider will arrive within{" "}
+                        <span className="font-semibold">30–60 minutes</span>.
+                        Please be available at the service location.
+                      </div>
                     </div>
                   )}
                   {booking.status === BookingStatus.rejected && (
@@ -269,8 +276,19 @@ export default function MyBookingsPage() {
                     </div>
                   )}
                   {booking.status === BookingStatus.completed && (
-                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700 mb-4">
-                      🎉 Work completed! Please make the payment below.
+                    <div className="rounded-lg bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-300 p-4 text-sm text-blue-800 mb-4">
+                      <div className="flex items-start gap-2">
+                        <CreditCard className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />
+                        <div>
+                          <p className="font-semibold text-blue-900 mb-0.5">
+                            🎉 Work Completed!
+                          </p>
+                          <p>
+                            Your provider has finished the work. Please complete
+                            the payment to leave a review.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -278,19 +296,20 @@ export default function MyBookingsPage() {
                   <div className="flex flex-wrap gap-2">
                     {booking.status === BookingStatus.completed && (
                       <Button
+                        size="lg"
                         onClick={() => handlePay(booking.id)}
                         disabled={payingBookingId === booking.id}
-                        className="font-semibold"
+                        className="font-semibold bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 text-white border-0 shadow-md"
                         data-ocid={`bookings.pay.button.${idx + 1}`}
                       >
                         {payingBookingId === booking.id ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-                            Processing...
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />{" "}
+                            Processing Payment...
                           </>
                         ) : (
                           <>
-                            <CreditCard className="mr-2 h-4 w-4" /> Pay Now
+                            <CreditCard className="mr-2 h-5 w-5" /> Pay Now
                           </>
                         )}
                       </Button>

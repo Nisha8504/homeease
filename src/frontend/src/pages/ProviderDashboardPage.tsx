@@ -97,6 +97,30 @@ export default function ProviderDashboardPage() {
       setUploadProgress(50);
       await actor.uploadIdProof(blobId);
       setUploadProgress(100);
+
+      // Store the file as base64 in localStorage so admin can preview it
+      // Only store if file is under 1.5MB to avoid quota issues
+      if (file.size <= 1.5 * 1024 * 1024) {
+        try {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              if (reader.result) {
+                localStorage.setItem(
+                  `idproof_${blobId}`,
+                  reader.result as string,
+                );
+              }
+            } catch {
+              // localStorage quota exceeded — ignore silently
+            }
+          };
+          reader.readAsDataURL(file);
+        } catch {
+          // FileReader error — ignore silently
+        }
+      }
+
       toast.success("ID proof submitted for verification!");
       queryClient.invalidateQueries({ queryKey: ["provider-profile"] });
     } catch (_err) {
@@ -122,7 +146,7 @@ export default function ProviderDashboardPage() {
     if (!actor) return;
     try {
       await actor.markBookingCompleted(bookingId);
-      toast.success("Booking marked as completed!");
+      toast.success("Work done! Customer will now proceed to payment.");
       queryClient.invalidateQueries({ queryKey: ["provider-bookings"] });
     } catch {
       toast.error("Failed to mark as completed.");
@@ -409,12 +433,12 @@ export default function ProviderDashboardPage() {
                         actions={
                           <Button
                             size="sm"
-                            variant="outline"
+                            className="bg-green-600 hover:bg-green-700 text-white border-0 font-semibold"
                             onClick={() => handleMarkCompleted(booking.id)}
                             data-ocid={`provider.complete.button.${idx + 1}`}
                           >
-                            <CheckCircle className="mr-1.5 h-4 w-4 text-green-500" />
-                            Mark Completed
+                            <CheckCircle className="mr-1.5 h-4 w-4" />
+                            Work Done
                           </Button>
                         }
                       />

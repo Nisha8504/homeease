@@ -48,11 +48,17 @@ export default function LoginPage() {
         navigate({ to: "/" });
       }
     } catch (err: any) {
-      const msg = err?.message || "Login failed";
+      const msg =
+        err?.message ||
+        err?.reject_message ||
+        (typeof err === "string" ? err : "") ||
+        "";
       if (
-        msg.includes("Invalid") ||
-        msg.includes("credentials") ||
-        msg.includes("not found")
+        msg.toLowerCase().includes("invalid") ||
+        msg.toLowerCase().includes("credentials") ||
+        msg.toLowerCase().includes("not found") ||
+        msg.toLowerCase().includes("trap") ||
+        msg === ""
       ) {
         toast.error("Invalid email or password. Please try again.");
       } else {
